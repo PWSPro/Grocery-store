@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ရွှေဖြိုးအိမ် - Database System</title>
+    <style>
+        :root {
+            --neon-cyan: #00ffcc;
+            --neon-pink: #ff2a6d;
+            --dark-bg: #090a0f;
+            --glass-bg: rgba(25, 26, 35, 0.7);
+        }
+        body {
+            background-color: var(--dark-bg);
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(0, 255, 204, 0.05), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(255, 42, 109, 0.05), transparent 25%);
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        h2 {
+            text-align: center;
+            color: var(--neon-cyan);
+            text-shadow: 0 0 15px rgba(0, 255, 204, 0.4);
+            letter-spacing: 2px;
+            margin-bottom: 30px;
+        }
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        input {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 15px;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+        input:focus {
+            outline: none;
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.2);
+        }
+        button.add-btn {
+            background: linear-gradient(45deg, #ff2a6d, #ff5e8e);
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(255, 42, 109, 0.4);
+            transition: transform 0.2s;
+        }
+        button.add-btn:active {
+            transform: scale(0.95);
+        }
+        .search-box {
+            width: 100%;
+            box-sizing: border-box;
+            border-color: rgba(0, 255, 204, 0.3);
+        }
+        .item {
+            background: rgba(0, 0, 0, 0.4);
+            border-left: 4px solid var(--neon-cyan);
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: transform 0.2s;
+        }
+        .item:hover {
+            transform: translateX(5px);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .item-name { font-size: 16px; display: block; margin-bottom: 5px; }
+        .item-price { color: var(--neon-pink); font-weight: bold; font-size: 15px; }
+        .delete-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 42, 109, 0.3);
+            color: var(--neon-pink);
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .delete-btn:hover {
+            background: rgba(255, 42, 109, 0.1);
+        }
+        .loading { text-align: center; color: var(--neon-cyan); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>ရွှေဖြိုးအိမ် DATA-HUB</h2>
+
+    <div class="glass-panel">
+        <div class="input-group">
+            <input type="text" id="newName" placeholder="ပစ္စည်းအမည် (ဥပမာ - ရေသန့်)">
+            <input type="text" id="newPrice" placeholder="ဈေးနှုန်း (ဥပမာ - ၄၀၀ ကျပ်)">
+            <button class="add-btn" onclick="addNewProduct()">မှတ်တမ်းတင်မည်</button>
+        </div>
+    </div>
+
+    <input type="text" id="searchInput" class="search-box glass-panel" placeholder="🔍 ပစ္စည်းအမည် ရှာရန်...">
+    
+    <div id="resultsContainer">
+        <div class="loading">Data များ ဆွဲယူနေပါသည်...</div>
+    </div>
+</div>
+
+<script>
+    let products = [];
+    const resultsContainer = document.getElementById('resultsContainer');
+    const searchInput = document.getElementById('searchInput');
+
+    // Server ကနေ Data လှမ်းယူခြင်း
+    async function fetchData() {
+        try {
+            const response = await fetch('/api/products');
+            products = await response.json();
+            displayProducts(products);
+        } catch (error) {
+            resultsContainer.innerHTML = '<div class="loading" style="color:red;">Data ဆွဲယူ၍ မရပါ</div>';
+        }
+    }
+
+    // UI တွင် ပြသခြင်း
+    function displayProducts(productList) {
+        resultsContainer.innerHTML = '';
+        if (productList.length === 0) {
+            resultsContainer.innerHTML = '<div class="loading">မှတ်တမ်းမရှိသေးပါ...</div>';
+            return;
+        }
+        productList.forEach(product => {
+            const div = document.createElement('div');
+            div.className = 'item';
+            div.innerHTML = `
+                <div>
+                    <span class="item-name">${product.name}</span>
+                    <span class="item-price">${product.price}</span>
+                </div>
+                <button class="delete-btn" onclick="deleteProduct(${product.id})">ဖျက်မည်</button>
+            `;
+            resultsContainer.appendChild(div);
+        });
+    }
+
+    // Server သို့ Data အသစ်ပို့ခြင်း
+    async function addNewProduct() {
+        const nameInput = document.getElementById('newName');
+        const priceInput = document.getElementById('newPrice');
+        
+        if (nameInput.value.trim() && priceInput.value.trim()) {
+            const newProduct = {
+                id: Date.now(),
+                name: nameInput.value.trim(),
+                price: priceInput.value.trim()
+            };
+            
+            await fetch('/api/products', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newProduct)
+            });
+
+            nameInput.value = '';
+            priceInput.value = '';
+            searchInput.value = '';
+            fetchData();
+        }
+    }
+
+    // Server မှ Data ပြန်ဖျက်ခြင်း
+    async function deleteProduct(id) {
+        if(confirm("ဒီပစ္စည်းကို စာရင်းထဲက ဖျက်မှာ သေချာလား?")) {
+            await fetch('/api/products/' + id, { method: 'DELETE' });
+            
+            const query = searchInput.value.toLowerCase();
+            if(query) {
+                products = products.filter(p => p.id !== id);
+                displayProducts(products.filter(p => p.name.toLowerCase().includes(query)));
+            } else {
+                fetchData();
+            }
+        }
+    }
+
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        displayProducts(products.filter(p => p.name.toLowerCase().includes(query)));
+    });
+
+    fetchData();
+</script>
+
+</body>
+</html>
